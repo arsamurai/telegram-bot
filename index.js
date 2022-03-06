@@ -16,7 +16,6 @@ const startGame = async (chatId, name) => {
   await bot.sendMessage(chatId, `${name}, я загадал решку или орла`);
   const rememberNum = Math.floor( 1 + Math.random() * 2);
   chats[chatId] = rememberNum;
-	console.log(rememberNum);
   await bot.sendMessage(chatId, "Твоя задача угадать...", gameOptions);
 };
 
@@ -99,7 +98,6 @@ const start = () => {
 				usedBlackHumor = [];
 				await bot.sendMessage(chatId, "Упс, шутки закончились, на повтор!");
 			}
-			console.log(usedBlackHumor.length);
 			const joke = black_humor[getJoke(usedBlackHumor, black_humor)];
 			return bot.sendMessage(chatId, joke);
 		}
