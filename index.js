@@ -43,7 +43,7 @@ const start = () => {
 
   bot.on("message", async (msg) => {
     const chatId = msg.chat.id;
-    const text = text && msg.text.toLowerCase();
+    const text = msg && msg.text?.toLowerCase();
     const name = msg.from.first_name;
 
 		if (text.includes("шутк")) {
