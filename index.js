@@ -60,10 +60,13 @@ const start = () => {
   bot.on("message", async (msg) => {
     const chatId = msg.chat.id;
     const text = msg && msg.text?.toLowerCase();
+		const textForUkraine = msg && msg.text && msg.text;
     const sticker = msg && msg.sticker && msg.sticker;
     const animation = msg && msg.animation && msg.animation;
     const name = msg.from.first_name;
 		isKeyWord = false;
+
+		console.log(msg);
 
     if (sticker || animation) {
       return bot.sendMessage(chatId, "Заебок");
@@ -81,11 +84,19 @@ const start = () => {
       return bot.sendMessage(chatId, joke);
     }
 		
-		textIncludes(text, chatId, ["аха", "хaх", "пхп"], "Ага, сам чуть не впісявся");
-		textIncludes(text, chatId, ["дякую"], "Та йди нахер)");
+		textIncludes(text, chatId, ["аха", "хaх", "пхп"], "Ага, сам чуть не впісявся)");
+		textIncludes(text, chatId, ["дякую", "спаcібо", "дяк"], "Та йди нахер)");
 		textIncludes(text, chatId, ["слава україні"], "Героям Слава!");
-		textIncludes(text, chatId, ["дякую"], "Та йди нахер)");
-		
+
+		if (text.includes("слава") && textForUkraine.includes("Україні")) {
+      return bot.sendMessage(chatId, 'Героям Слава!');
+    } else if (textForUkraine.includes("україн")) {
+      return bot.sendMessage(chatId, 'Україна з великою пишеться, придурок!')
+		} else if (textForUkraine.includes("Україна"))
+      return bot.sendMessage(chatId, 'Понад усе!');
+    if (text.includes("слава нації")) {
+      return bot.sendMessage(chatId, 'Смерть ворогам!');
+    }
     if (text === "/start") {
       return bot.sendMessage(chatId, `${name}, здарова`);
     }
