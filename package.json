@@ -1,14 +1,17 @@
 {
-   "name": "TokenLinkBot",
-   "version": "1.0.0",
-   "author": "Ebes Silence",
-   "license": "MIT",
-   "main": "index.js",
-   "scripts": {
-		"dev": "nodemon index.js",
-		"start": "node index.js"
-	},
-   "dependencies": {
+  "name": "RobertBot",
+  "version": "1.0.0",
+  "author": "Artur Musienko and Ebes Silence",
+  "license": "MIT",
+  "main": "index.js",
+  "scripts": {
+    "dev": "nodemon index.js",
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.0.0",
+    "express": "^4.17.3",
+    "mongoose": "^6.1.7",
     "node-telegram-bot-api": "0.56.0",
     "nodemon": "2.0.15"
   }
