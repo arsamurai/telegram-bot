@@ -1,6 +1,6 @@
 const TelegramBot = require('node-telegram-bot-api');
-// const token = '5143937293:AAE41S8LzEdO_LAayRDm-DOwU_GQqnMqGb4';
-const token = '5222945979:AAGs9GShgnXD0P0S5yuPZIscm6QeNsE-OdM';
+const token = '5143937293:AAE41S8LzEdO_LAayRDm-DOwU_GQqnMqGb4';
+// const token = '5222945979:AAGs9GShgnXD0P0S5yuPZIscm6QeNsE-OdM';
 const { gameOptions, againOptions, unluckyDaysOptions, jokesOptions } = require('./options');
 const { black_humor, stupid_humor_plus, stupid_humor } = require('./jokes');
 const { answers, answer_5, answer_6 } = require('./answers');
@@ -58,6 +58,7 @@ const start = () => {
     console.log(msg);
     const chatId = msg.chat.id;
     const text = msg && msg.text?.toLowerCase();
+    const textForUkraine = msg && msg.text;
     const sticker = msg && msg.sticker && msg.sticker;
     const animation = msg && msg.animation && msg.animation;
     const photo = msg && msg.photo && msg.photo;
