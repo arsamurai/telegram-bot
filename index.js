@@ -2,8 +2,8 @@ require("dotenv").config();
 const mongoose = require("mongoose");
 const Subject = require("./models/Subject");
 // const token = '5143937293:AAE41S8LzEdO_LAayRDm-DOwU_GQqnMqGb4';
-const TelegramBot = require("node-telegram-bot-api");
 const token = "5222945979:AAGs9GShgnXD0P0S5yuPZIscm6QeNsE-OdM";
+const TelegramBot = require("node-telegram-bot-api");
 const {
   gameOptions,
   againOptions,
