@@ -9,18 +9,7 @@ module.exports = {
 	againOptions: {
 		reply_markup: JSON.stringify({
 			inline_keyboard: [
-				[{text: "Играть ше раз ", callback_data: "/again"}],
-			]
-		})
-	},
-	unluckyDaysOptions: { 
-		reply_markup: JSON.stringify({
-			inline_keyboard: [
-				[{text: "2022", callback_data: "2022"}, {text: "2021", callback_data: "2021"}],
-				[{text: "2020", callback_data: "2020"}, {text: "2019", callback_data: "2019"}],
-				[{text: "2018", callback_data: "2018"}, {text: "2017", callback_data: "2017"}],
-				[{text: "2016", callback_data: "2016"}, {text: "2015", callback_data: "2015"}],
-				[{text: "2014", callback_data: "2014"}, {text: "2013", callback_data: "2013"}],
+				[{text: "Играть ше раз", callback_data: "/again"}],
 			]
 		})
 	},
@@ -30,6 +19,47 @@ module.exports = {
 				[{text: "Чёрный юмор", callback_data: "black-humor"}],
 				[{text: "Тупой юмор", callback_data: "stupid-humor"}],
 				[{text: "Тупой юмор +", callback_data: "stupid-humor-plus"}],
+			]
+		})
+	},
+	subjectChangeOptions: { 
+		reply_markup: JSON.stringify({
+			inline_keyboard: [
+				[{text: "Назва", callback_data: "name"}],
+				[{text: "Посилання", callback_data: "link"}],
+				[{text: "Д/з", callback_data: "h/t"}],
+				[{text: "Пара", callback_data: "lesson"}],
+				[{text: "День", callback_data: "day"}],
+			]
+		})
+	},
+	hometaskOptions: {
+		parse_mode: "Markdown",
+		reply_markup: JSON.stringify({
+			inline_keyboard: [
+				[{text: "Д/з", callback_data: "h/t"}],
+			]
+		})
+	},
+	lessonOptions: { 
+		reply_markup: JSON.stringify({
+			inline_keyboard: [
+				[{text: "1", callback_data: "08:00-09:35"}],
+				[{text: "2", callback_data: "09:50-11:25"}],
+				[{text: "3", callback_data: "11:50-13:25"}],
+				[{text: "4", callback_data: "13:40-15:15"}],
+				[{text: "5", callback_data: "15:20-16:55"}],
+			]
+		})
+	},
+	dayOptions: { 
+		reply_markup: JSON.stringify({
+			inline_keyboard: [
+				[{text: "Понеділок", callback_data: "monday"}],
+				[{text: "Вівторок", callback_data: "tuesday"}],
+				[{text: "Середа", callback_data: "wednesday"}],
+				[{text: "Четверг", callback_data: "thursday"}],
+				[{text: "П'ятниця", callback_data: "friday"}],
 			]
 		})
 	},
