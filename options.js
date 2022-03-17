@@ -6,10 +6,17 @@ module.exports = {
 			]
 		})
 	},
-	againOptions: {
+	againGameOptions: {
 		reply_markup: JSON.stringify({
 			inline_keyboard: [
-				[{text: "Играть ше раз", callback_data: "/again"}],
+				[{text: "Играть ше раз", callback_data: "/again_game"}],
+			]
+		})
+	},
+	againPasswordOptions: {
+		reply_markup: JSON.stringify({
+			inline_keyboard: [
+				[{text: "Спробувати ще раз", callback_data: "/again_password"}],
 			]
 		})
 	},
@@ -60,6 +67,15 @@ module.exports = {
 				[{text: "Середа", callback_data: "wednesday"}],
 				[{text: "Четверг", callback_data: "thursday"}],
 				[{text: "П'ятниця", callback_data: "friday"}],
+			]
+		})
+	},
+	botOptions: { 
+		reply_markup: JSON.stringify({
+			keyboard: [
+				[{text: "Предмети"}],
+				[{text: "Шутку"}],
+				[{text: "Орел&Решка"}],
 			]
 		})
 	},
