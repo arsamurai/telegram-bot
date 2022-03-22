@@ -1,6 +1,5 @@
 require("dotenv").config();
 const mongoose = require("mongoose");
-
 // const token = '5143937293:AAE41S8LzEdO_LAayRDm-DOwU_GQqnMqGb4';
 const token = "5222945979:AAGs9GShgnXD0P0S5yuPZIscm6QeNsE-OdM";
 const TelegramBot = require("node-telegram-bot-api");
@@ -26,9 +25,7 @@ const {
 const { Subject, User } = require("./models/Schemas");
 
 const bot = new TelegramBot(token, { polling: true });
-
 const chats = {};
-
 const subjectsNames = [];
 
 // Jokes
@@ -36,34 +33,6 @@ let usedJokes = [];
 let usedBlackHumor = [];
 let usedStupidHumor = [];
 let usedStupidHumorPlus = [];
-
-// Enter password of bot
-let isEnterPassword = false;
-let isAuth = false;
-
-// let isKeyWord = false;
-
-// // DB settings for add subject
-// let isEnterName = false;
-// let isEnterLink = false;
-// let isEnterHT = false;
-// let isEnterNumOfLesson = false;
-// let isEnterNumOfDay = false;
-
-// // DB settings for edit subject
-// let isEnterEditName = false;
-// let isEnterEditData = false;
-
-// let isEditName = false;
-// let isEditLink = false;
-// let isEditHT = false;
-// let isEditNumOfLesson = false;
-// let isEditNumOfDay = false;
-
-// let enteredName = "";
-// let isDeleteSubject = false;
-// let isHomeTask = false;
-// let isGame = false;
 
 const startGame = async (chatId, name) => {
 	chats[`isGame-${chatId}`] = true;
@@ -134,7 +103,7 @@ const start = async () => {
     const name = msg.from.first_name;
 		chats[`isKeyWord-${chatId}`] = false;
 
-		console.log(msg);
+		//console.log(msg);
 
     if (sticker || animation) {
       return bot.sendMessage(chatId, "Заебок");
@@ -147,16 +116,19 @@ const start = async () => {
     }
 
     // Add new subject
-    if (!chats[`isAuth-${chatId}`] && text === "/add_subject" || text === "/edit_subject") {
+    if (!chats[`isAuth-${chatId}`] && text === "/add_subject" 
+		|| !chats[`isAuth-${chatId}`] && text === "/edit_subject" 
+		|| !chats[`isAuth-${chatId}`] && text === "/delete_subject") {
       chats[`isEnterPassword-${chatId}`] = true;
       return bot.sendMessage(chatId, "Ого, для цього введи пароль...");
     }
 
 		if(chats[`isEnterPassword-${chatId}`]) {
 			chats[`isEnterPassword-${chatId}`] = false;
+			console.log(chats[`isAuth-${chatId}`]);
 			if(text === process.env.botPassword) {
 				chats[`isAuth-${chatId}`] = true;
-				return bot.sendMessage(chatId, "Правильно! Тепер можеш додати або змінити предмет)");
+				return bot.sendMessage(chatId, "Правильно! Тепер можеш додати/змінити/видалити предмет)");
 			} else {
 				return bot.sendMessage(chatId, "Не, не угадав(");
 			}
@@ -168,6 +140,7 @@ const start = async () => {
 		}
 
     if (chats[`isEnterName-${chatId}`]) {
+			if(text.includes('`')) return bot.sendMessage(chatId, "В назві не може бути таких скобок: ` . Спробуй знову...");
       const candidate = await Subject.findOne({ name: text });
       if (candidate) {
         return bot.sendMessage(
@@ -175,11 +148,12 @@ const start = async () => {
           "Такий предмет уже інсує! Спробуй знову..."
         );
       }
-      const subject = new Subject({ name: text });
+      const subject = new Subject({ name: text, link: '-', hometask: '-', numOfLesson: '-', numOfDay: '-' });
       await subject.save();
       chats[`enteredName-${chatId}`] = text;
       chats[`isEnterName-${chatId}`] = false;
       chats[`isEnterLink-${chatId}`] = true;
+			console.log(subject);
       return bot.sendMessage(chatId, "Впиши посилання на предмет");
     }
     if (chats[`isEnterLink-${chatId}`]) {
@@ -191,8 +165,8 @@ const start = async () => {
     if (chats[`isEnterHT-${chatId}`]) {
       await Subject.findOneAndUpdate({ name: chats[`enteredName-${chatId}`] }, { hometask: text });
       chats[`isEnterHT-${chatId}`] = false;
-			chats[`isEnterNumOfLesson-${chatId}`] = true;
-      return bot.sendMessage(chatId, "Вибери номер пари", lessonOptions);
+			chats[`isEnterNumOfDay-${chatId}`] = true;
+      return bot.sendMessage(chatId, "Вибери день неділі", dayOptions);
     }
 
     // Get subjects
@@ -234,23 +208,27 @@ const start = async () => {
         }
       }
 
-      if (monday.length >= 15) result += `${monday}`;
-      if (tuesday.length >= 15) {
+      if (monday.length > 15) result += `${monday}`;
+      if (tuesday.length > 15) {
         result += `
 				${tuesday}`;
       }
-      if (wednesday.length >= 15) {
+      if (wednesday.length > 15) {
         result += `
 				${wednesday}`;
       }
-      if (thursday.length >= 15) {
+      if (thursday.length > 15) {
         result += `
 				${thursday}`;
       }
-      if (friday.length >= 15) {
+      if (friday.length > 15) {
         result += `
 				${friday}`;
       }
+
+			if(result.length <= 62) {
+				result += `Немає жодного предмета!`;
+			}
 
       return bot.sendMessage(chatId, `Тримай: ${result}`, hometaskOptions);
     }
@@ -262,8 +240,8 @@ const start = async () => {
         const subject = await Subject.findOne({ name: text });
         result += `
 						Name: *${subject.name}*
-						Link: __${subject.link}__
-						H/t: _${subject.hometask}_
+						Link: __${subject.hometask ? subject.link : '-'}__
+						H/t: _${subject.hometask ? subject.hometask : '-'}_
 						Lesson: _${subject.numOfLesson}_
 						Day: _${subject.numOfDay}_
 					`;
@@ -285,19 +263,29 @@ const start = async () => {
     }
 
     if (chats[`isEnterEditName-${chatId}`]) {
-      chats[`enteredName-${chatId}`] = text;
-      chats[`isEnterEditName-${chatId}`] = false;
-			chats[`isEnterEditData-${chatId}`] = true;
-      return bot.sendMessage(chatId, "Що хочеш змінити?", subjectChangeOptions);
+			if(subjectsNames.includes(text)) {
+				chats[`enteredName-${chatId}`] = text;
+				chats[`isEnterEditName-${chatId}`] = false;
+				chats[`isEnterEditData-${chatId}`] = true;
+				return bot.sendMessage(chatId, "Що хочеш змінити?", subjectChangeOptions);
+			} else {
+				chats[`enteredName-${chatId}`] = '';
+				chats[`isEnterEditName-${chatId}`] = false;
+				return bot.sendMessage(chatId, "Такого предмета немає(");
+			}
     }
+
+		console.log(subjectsNames);
 
     if (chats[`isEditName-${chatId}`]) {
       await Subject.findOneAndUpdate({ name: chats[`enteredName-${chatId}`] }, { name: text });
+			const nameOfSubject = subjectsNames.indexOf([(chats[`enteredName-${chatId}`])]);
+      subjectsNames.splice(nameOfSubject, 1);
       subjectsNames.push(text);
       chats[`enteredName-${chatId}`] = "";
       chats[`isEnterEditData-${chatId}`] = false;
       chats[`isEditName-${chatId}`] = false;
-      return bot.sendMessage(chatId, "Назву изменено!");
+      return bot.sendMessage(chatId, "Назву змінено!");
     }
     if (chats[`isEditLink-${chatId}`]) {
       await Subject.findOneAndUpdate({ name: chats[`enteredName-${chatId}`] }, { link: text });
@@ -331,11 +319,14 @@ const start = async () => {
     // Delete one subject
     if (text === "/delete_subject") {
       chats[`isDeleteSubject-${chatId}`] = true;
-      return bot.sendMessage(chatId, "Який предмет треба видалити?..", {
-        reply_markup: JSON.stringify({
-          inline_keyboard: subjectsNamesOptions,
-        }),
-      });
+			if(subjectsNamesOptions.length) {
+				return bot.sendMessage(chatId, "Який предмет треба видалити?..", {
+					reply_markup: JSON.stringify({
+						inline_keyboard: subjectsNamesOptions,
+					}),
+				});
+			}
+      return bot.sendMessage(chatId, "Поки що немає жодного предмета...");
     }
 
     textIncludes(
@@ -446,25 +437,54 @@ const start = async () => {
     }
 
     // Add lesson and day settings
-    if (chats[`isEnterNumOfLesson-${chatId}`]) {
-      await Subject.findOneAndUpdate(
-        { name: chats[`enteredName-${chatId}`] },
-        { numOfLesson: data }
-      );
-      chats[`isEnterNumOfLesson-${chatId}`] = false;
-      chats[`isEnterNumOfDay-${chatId}`] = true;
-      return bot.sendMessage(chatId, "Вибери день неділі", dayOptions);
-    }
     if (chats[`isEnterNumOfDay-${chatId}`]) {
+			chats[`numOfDay-${chatId}`] = data;
       await Subject.findOneAndUpdate({ name: chats[`enteredName-${chatId}`] }, { numOfDay: data });
+			chats[`isEnterNumOfDay-${chatId}`] = false;
+      chats[`isEnterNumOfLesson-${chatId}`] = true;
+      return bot.sendMessage(chatId, "Вибери номер пари", lessonOptions);
+    }
+    if (chats[`isEnterNumOfLesson-${chatId}`]) {
+			const subjects = await Subject.find({numOfDay: chats[`numOfDay-${chatId}`]});
+			for(let i = 0; i < subjects.length; i++) {
+				if(data === subjects[i].numOfLesson) {
+					console.log(subjects[i].numOfLesson)
+					return bot.sendMessage(chatId, `В цей день ${subjects[i].numOfLesson} пара вже зайнята. Вибери інший номер...`, lessonOptions);
+				}
+			}
+			chats[`numOfDay-${chatId}`] = "";
+      await Subject.findOneAndUpdate({ name: chats[`enteredName-${chatId}`] }, { numOfLesson: data });
       subjectsNames.push(chats[`enteredName-${chatId}`]);
       chats[`enteredName-${chatId}`] = "";
-      chats[`isEnterNumOfDay-${chatId}`] = false;
+      chats[`isEnterNumOfLesson-${chatId}`] = false;
       return bot.sendMessage(chatId, "Предмет додано!");
     }
 
     // Edit lesson and day settings
-    if (chats[`isEditNumOfLesson-${chatId}`]) {
+    if (chats[`isEditNumOfDay-${chatId}`]) {
+			const subject = await Subject.findOne({name: chats[`enteredName-${chatId}`]});
+			const subjects = await Subject.find({numOfDay: data});
+			for(let i = 0; i < subjects.length; i++) {
+				if(subject.numOfLesson === subjects[i].numOfLesson) {
+					console.log(subjects[i].numOfLesson)
+					return bot.sendMessage(chatId, `В цей день ${subjects[i].numOfLesson} пара вже зайнята. Вибери інший день...`, dayOptions);
+				}
+			}
+      await Subject.findOneAndUpdate({ name: chats[`enteredName-${chatId}`] }, { numOfDay: data });
+      chats[`enteredName-${chatId}`] = "";
+      chats[`isEnterEditData-${chatId}`] = false;
+      chats[`isEditNumOfDay-${chatId}`] = false;
+      return bot.sendMessage(chatId, "День пари змінено!");
+    }
+		if (chats[`isEditNumOfLesson-${chatId}`]) {
+			const subject = await Subject.findOne({name: chats[`enteredName-${chatId}`]});
+			const subjects = await Subject.find({numOfDay: subject.numOfDay});
+			for(let i = 0; i < subjects.length; i++) {
+				if(data === subjects[i].numOfLesson) {
+					console.log(subjects[i].numOfLesson)
+					return bot.sendMessage(chatId, `В цей день ${subjects[i].numOfLesson} пара вже зайнята. Вибери інший номер...`, lessonOptions);
+				}
+			}
       await Subject.findOneAndUpdate(
         { name: chats[`enteredName-${chatId}`] },
         { numOfLesson: data }
@@ -473,13 +493,6 @@ const start = async () => {
       chats[`isEnterEditData-${chatId}`] = false;
       chats[`isEditNumOfLesson-${chatId}`] = false;
       return bot.sendMessage(chatId, "Номер пари змінено!");
-    }
-    if (chats[`isEditNumOfDay-${chatId}`]) {
-      await Subject.findOneAndUpdate({ name: chats[`enteredName-${chatId}`] }, { numOfDay: data });
-      chats[`enteredName-${chatId}`] = "";
-      chats[`isEnterEditData-${chatId}`] = false;
-      chats[`isEditNumOfDay-${chatId}`] = false;
-      return bot.sendMessage(chatId, "День пари змінено!");
     }
 
     // Change subject settings
@@ -514,14 +527,17 @@ const start = async () => {
 
     if (data === "h/t") {
 			// chats[`isHomeTask-${chatId}`] = true;
-      return bot.sendMessage(chatId, "Д/з якого предмета треба?..", {
-        reply_markup: JSON.stringify({
-          inline_keyboard: subjectsNamesOptions,
-        }),
-      });
+			if(subjectsNamesOptions.length) {
+				return bot.sendMessage(chatId, "Д/з якого предмета треба?..", {
+					reply_markup: JSON.stringify({
+						inline_keyboard: subjectsNamesOptions,
+					}),
+				});
+			}
+      return bot.sendMessage(chatId, "Поки що немає жодного предмета...");
     }
 
-    // Get h/t of one subject
+    // Delete one subject and Get h/t of one subject
     for (let i = 0; i < subjectsNames.length; i++) {
       if (chats[`isDeleteSubject-${chatId}`] && data === subjectsNames[i]) {
         const subject = await Subject.findOne({ name: data });
