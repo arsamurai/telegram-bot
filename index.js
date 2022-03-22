@@ -25,9 +25,7 @@ const {
 const { Subject, User } = require("./models/Schemas");
 
 const bot = new TelegramBot(token, { polling: true });
-
 const chats = {};
-
 const subjectsNames = [];
 
 // Jokes
