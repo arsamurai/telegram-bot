@@ -13,6 +13,7 @@ const {
   hometaskOptions,
   botOptions,
 	againPasswordOptions,
+	weekOptions,
 } = require("./options");
 const { black_humor, stupid_humor_plus, stupid_humor } = require("./jokes");
 const {
@@ -27,6 +28,17 @@ const { Subject, User } = require("./models/Schemas");
 const bot = new TelegramBot(token, { polling: true });
 const chats = {};
 const subjectsNames = [];
+const lessonsNums = {
+	1: "08:00-09:35",
+	2: "09:50-11:25",
+	3: "11:50-13:25", 
+	4: "13:40-15:15",
+	5: "15:20-16:55"
+}
+const weekNums = {
+	"even": "П",
+	"odd": "Н",
+}
 
 // Jokes
 let usedJokes = [];
@@ -61,6 +73,35 @@ const textIncludes = (text, chatId, words, message) => {
   }
 };
 
+const getDaySubjects = (subjects) => {
+	let day = '';
+	for(let i=0; i<subjects.length; i++) {
+		if(subjects[i+1] && subjects[i].numOfLesson === subjects[i+1].numOfLesson) {
+			day += `
+_${subjects[i].numOfLesson}_) \`${lessonsNums[subjects[i].numOfLesson]}\` — "[${subjects[i].name.toUpperCase()} | ${weekNums[subjects[i].numOfWeek]}](${subjects[i].link})" | "[${subjects[i+1].name.toUpperCase()} | ${weekNums[subjects[i+1].numOfWeek]}](${subjects[i+1].link})"`;
+		} else if(subjects[i-1] && subjects[i].numOfLesson !== subjects[i-1].numOfLesson){
+		day += `
+_${subjects[i].numOfLesson}_) \`${lessonsNums[subjects[i].numOfLesson]}\` — "[${subjects[i].name.toUpperCase()} | ${weekNums[subjects[i].numOfWeek]}](${subjects[i].link})"`;
+		} else if(!subjects[i-1] && !subjects[i-1]) {
+		day += `
+_${subjects[i].numOfLesson}_) \`${lessonsNums[subjects[i].numOfLesson]}\` — "[${subjects[i].name.toUpperCase()} | ${weekNums[subjects[i].numOfWeek]}](${subjects[i].link})"`;
+		}
+	}
+	return day;
+}
+
+const getWeather = async (chatId, city) => {
+	chats[`isKeyWord-${chatId}`] = true;
+	const response = await import('node-fetch').then(({ default: fetch }) => fetch(`https://api.openweathermap.org/data/2.5/weather?q=${city}&units=metric&appid=${process.env.weatherApiKey}`))
+	const data = await response.json();
+	if(data.cod == 404) {
+		return bot.sendMessage(chatId, 'Сорі, ошибка(');
+	}
+	await bot.sendMessage(chatId, `Погода в ${city}: ${data.weather[0].description}`);
+	await bot.sendPhoto(chatId, `https://openweathermap.org/img/wn/${data.weather[0].icon}@2x.png`)
+	return bot.sendMessage(chatId, `Температура: ${data.main.temp} °С`);
+}
+
 const start = async () => {
   //Set mongoDB
   try {
@@ -73,7 +114,7 @@ const start = async () => {
     console.log(e);
   }
 
-  const subjectsNamesOptions = subjectsNames.map((item) => {
+  let subjectsNamesOptions = subjectsNames.map((item) => {
     return [{ text: item, callback_data: item }];
   });
 
@@ -87,6 +128,7 @@ const start = async () => {
     { command: "/add_subject", description: "Add one more subject" },
     { command: "/edit_subject", description: "Edit one subject" },
     { command: "/delete_subject", description: "Delete one subject" },
+    { command: "/get_weather", description: "Get weather of location" },
   ]);
 
   //Reaction on message
@@ -106,17 +148,21 @@ const start = async () => {
 		//console.log(msg);
 
     if (sticker || animation) {
-      return bot.sendMessage(chatId, "Заебок");
+      return bot.sendMessage(chatId, "Заебок", {
+				reply_to_message_id: msg.message_id
+			});
     }
     if (photo|| video_note || voice) {
-      return bot.sendMessage(chatId, answers(answer_6));
+      return bot.sendMessage(chatId, answers(answer_6), {
+				reply_to_message_id: msg.message_id
+			});
     }
     if (document) {
       return bot.sendMessage(chatId, "Заебок");
     }
 
-    // Add new subject
-    if (!chats[`isAuth-${chatId}`] && text === "/add_subject" 
+		// Enter password
+		if (!chats[`isAuth-${chatId}`] && text === "/add_subject" 
 		|| !chats[`isAuth-${chatId}`] && text === "/edit_subject" 
 		|| !chats[`isAuth-${chatId}`] && text === "/delete_subject") {
       chats[`isEnterPassword-${chatId}`] = true;
@@ -125,7 +171,6 @@ const start = async () => {
 
 		if(chats[`isEnterPassword-${chatId}`]) {
 			chats[`isEnterPassword-${chatId}`] = false;
-			console.log(chats[`isAuth-${chatId}`]);
 			if(text === process.env.botPassword) {
 				chats[`isAuth-${chatId}`] = true;
 				return bot.sendMessage(chatId, "Правильно! Тепер можеш додати/змінити/видалити предмет)");
@@ -134,6 +179,7 @@ const start = async () => {
 			}
 		}
 
+    // Add new subject
 		if(text === "/add_subject") {
 			chats[`isEnterName-${chatId}`] = true;
       return bot.sendMessage(chatId, "Впиши назву предмета");
@@ -153,14 +199,13 @@ const start = async () => {
       chats[`enteredName-${chatId}`] = text;
       chats[`isEnterName-${chatId}`] = false;
       chats[`isEnterLink-${chatId}`] = true;
-			console.log(subject);
-      return bot.sendMessage(chatId, "Впиши посилання на предмет");
+      return bot.sendMessage(chatId, "Впиши посилання на предмет (або '-')");
     }
     if (chats[`isEnterLink-${chatId}`]) {
       await Subject.findOneAndUpdate({ name: chats[`enteredName-${chatId}`] }, { link: text });
       chats[`isEnterLink-${chatId}`] = false;
       chats[`isEnterHT-${chatId}`] = true;
-      return bot.sendMessage(chatId, "Впиши д/з на предмета");
+      return bot.sendMessage(chatId, "Впиши д/з на предмета (або '-')");
     }
     if (chats[`isEnterHT-${chatId}`]) {
       await Subject.findOneAndUpdate({ name: chats[`enteredName-${chatId}`] }, { hometask: text });
@@ -175,39 +220,47 @@ const start = async () => {
 			*Розраби:* [LinkStudy](https://t.me/+zo1juPQYJqZjNTYy)
 			`;
       let monday = `
-			*Monday*`;
+*Monday*`;
       let tuesday = `
-			*Tuesday*`;
+*Tuesday*`;
       let wednesday = `
-			*Wednesday*`;
+*Wednesday*`;
       let thursday = `
-			*Thursday*`;
+*Thursday*`;
       let friday = `
-			*Friday*`;
+*Friday*`;
+
       const subjects = await Subject.find().sort("numOfLesson");
+			const mondaySubjects = [];
+			const tuesdaySubjects = [];
+			const wednesdaySubjects = [];
+			const thursdaySubjects = [];
+			const fridaySubjects = [];
+
       for (let i = 0; i < subjects.length; i++) {
         if (subjects[i].numOfDay === "monday") {
-          monday += `
-						_${subjects[i].numOfLesson}_ — [${subjects[i].name}](${subjects[i].link})`;
-        }
-        if (subjects[i].numOfDay === "tuesday") {
-          tuesday += `
-						_${subjects[i].numOfLesson}_ — [${subjects[i].name}](${subjects[i].link})`;
-        }
-        if (subjects[i].numOfDay === "wednesday") {
-          wednesday += `
-						_${subjects[i].numOfLesson}_ — [${subjects[i].name}](${subjects[i].link})`;
-        }
-        if (subjects[i].numOfDay === "thursday") {
-          thursday += `
-						_${subjects[i].numOfLesson}_ — [${subjects[i].name}](${subjects[i].link})`;
-        }
-        if (subjects[i].numOfDay === "friday") {
-          friday += `
-						_${subjects[i].numOfLesson}_ — [${subjects[i].name}](${subjects[i].link})`;
-        }
+					mondaySubjects.push(subjects[i]);
+				}
+				if (subjects[i].numOfDay === "tuesday") {
+					tuesdaySubjects.push(subjects[i]);
+				}
+				if (subjects[i].numOfDay === "wednesday") {
+					wednesdaySubjects.push(subjects[i]);
+				}
+				if (subjects[i].numOfDay === "thursday") {
+					thursdaySubjects.push(subjects[i]);
+				}
+				if (subjects[i].numOfDay === "friday") {
+					fridaySubjects.push(subjects[i]);
+				}
       }
 
+			monday += getDaySubjects(mondaySubjects);
+			tuesday += getDaySubjects(tuesdaySubjects);
+			wednesday += getDaySubjects(wednesdaySubjects);
+			thursday += getDaySubjects(thursdaySubjects);
+			friday += getDaySubjects(fridaySubjects);
+			
       if (monday.length > 15) result += `${monday}`;
       if (tuesday.length > 15) {
         result += `
@@ -227,10 +280,11 @@ const start = async () => {
       }
 
 			if(result.length <= 62) {
-				result += `Немає жодного предмета!`;
+				result += `
+Немає жодного предмета!`;
 			}
 
-      return bot.sendMessage(chatId, `Тримай: ${result}`, hometaskOptions);
+      return bot.sendMessage(chatId, result, hometaskOptions);
     }
 
     // Get one subject
@@ -242,8 +296,8 @@ const start = async () => {
 						Name: *${subject.name}*
 						Link: __${subject.hometask ? subject.link : '-'}__
 						H/t: _${subject.hometask ? subject.hometask : '-'}_
-						Lesson: _${subject.numOfLesson}_
-						Day: _${subject.numOfDay}_
+						Lesson: _${subject.numOfLesson} - ${lessonsNums[subject.numOfLesson]}_
+						Day: _${subject.numOfDay} | ${weekNums[subject.numOfWeek]}_
 					`;
         return bot.sendMessage(
           chatId,
@@ -275,13 +329,14 @@ const start = async () => {
 			}
     }
 
-		console.log(subjectsNames);
-
     if (chats[`isEditName-${chatId}`]) {
       await Subject.findOneAndUpdate({ name: chats[`enteredName-${chatId}`] }, { name: text });
-			const nameOfSubject = subjectsNames.indexOf([(chats[`enteredName-${chatId}`])]);
+			const nameOfSubject = subjectsNames.indexOf(chats[`enteredName-${chatId}`]);
       subjectsNames.splice(nameOfSubject, 1);
       subjectsNames.push(text);
+			subjectsNamesOptions = subjectsNames.map((item) => {
+				return [{ text: item, callback_data: item }];
+			});
       chats[`enteredName-${chatId}`] = "";
       chats[`isEnterEditData-${chatId}`] = false;
       chats[`isEditName-${chatId}`] = false;
@@ -302,20 +357,6 @@ const start = async () => {
       return bot.sendMessage(chatId, "Д/з змінено!");
     }
 
-    //Replies to various messages
-    if (text.includes("шутк")) {
-      const jokes = [...black_humor, ...stupid_humor, ...stupid_humor_plus];
-      if (usedJokes.length > 24) {
-        usedJokes = [];
-        await bot.sendMessage(
-          chatId,
-          "Упс, шутки закончились, буду повторять, неугомонний, бля)"
-        );
-      } else await bot.sendMessage(chatId, `Хтось хоче шутку?`);
-      const joke = jokes[getJoke(usedJokes, jokes)];
-      return bot.sendMessage(chatId, joke);
-    }
-
     // Delete one subject
     if (text === "/delete_subject") {
       chats[`isDeleteSubject-${chatId}`] = true;
@@ -327,6 +368,26 @@ const start = async () => {
 				});
 			}
       return bot.sendMessage(chatId, "Поки що немає жодного предмета...");
+    }
+
+
+		if(text === 'погода') {
+			return getWeather(chatId, 'odessa');
+		}
+
+
+		//Replies to various messages
+    if (text.includes("шутк")) {
+      const jokes = [...black_humor, ...stupid_humor, ...stupid_humor_plus];
+      if (usedJokes.length > 24) {
+        usedJokes = [];
+        await bot.sendMessage(
+          chatId,
+          "Упс, шутки закончились, буду повторять, неугомонний, бля)"
+        );
+      } else await bot.sendMessage(chatId, `Хтось хоче шутку?`);
+      const joke = jokes[getJoke(usedJokes, jokes)];
+      return bot.sendMessage(chatId, joke);
     }
 
     textIncludes(
@@ -378,6 +439,12 @@ const start = async () => {
 
     !chats[`isKeyWord-${chatId}`] && bot.sendMessage(chatId, "Я хз, шо ти хочеш(");
   });
+
+
+
+
+
+
 
   bot.on("callback_query", async (msg) => {
     const data = msg.data;
@@ -441,20 +508,30 @@ const start = async () => {
 			chats[`numOfDay-${chatId}`] = data;
       await Subject.findOneAndUpdate({ name: chats[`enteredName-${chatId}`] }, { numOfDay: data });
 			chats[`isEnterNumOfDay-${chatId}`] = false;
+      chats[`isEnterNumOfWeek-${chatId}`] = true;
+      return bot.sendMessage(chatId, "Вибери тиждень", weekOptions);
+    }
+		if (chats[`isEnterNumOfWeek-${chatId}`]) {
+			chats[`numOfWeek-${chatId}`] = data;
+      await Subject.findOneAndUpdate({ name: chats[`enteredName-${chatId}`] }, { numOfWeek: data });
+			chats[`isEnterNumOfWeek-${chatId}`] = false;
       chats[`isEnterNumOfLesson-${chatId}`] = true;
       return bot.sendMessage(chatId, "Вибери номер пари", lessonOptions);
     }
     if (chats[`isEnterNumOfLesson-${chatId}`]) {
-			const subjects = await Subject.find({numOfDay: chats[`numOfDay-${chatId}`]});
+			const subjects = await Subject.find({numOfDay: chats[`numOfDay-${chatId}`], numOfWeek: chats[`numOfWeek-${chatId}`]});
 			for(let i = 0; i < subjects.length; i++) {
 				if(data === subjects[i].numOfLesson) {
-					console.log(subjects[i].numOfLesson)
-					return bot.sendMessage(chatId, `В цей день ${subjects[i].numOfLesson} пара вже зайнята. Вибери інший номер...`, lessonOptions);
+					return bot.sendMessage(chatId, `В цей день ${data} пара вже зайнята. Вибери інший номер...`, lessonOptions);
 				}
 			}
 			chats[`numOfDay-${chatId}`] = "";
+			chats[`numOfWeek-${chatId}`] = "";
       await Subject.findOneAndUpdate({ name: chats[`enteredName-${chatId}`] }, { numOfLesson: data });
       subjectsNames.push(chats[`enteredName-${chatId}`]);
+			subjectsNamesOptions = subjectsNames.map((item) => {
+				return [{ text: item, callback_data: item }];
+			});
       chats[`enteredName-${chatId}`] = "";
       chats[`isEnterNumOfLesson-${chatId}`] = false;
       return bot.sendMessage(chatId, "Предмет додано!");
@@ -463,11 +540,10 @@ const start = async () => {
     // Edit lesson and day settings
     if (chats[`isEditNumOfDay-${chatId}`]) {
 			const subject = await Subject.findOne({name: chats[`enteredName-${chatId}`]});
-			const subjects = await Subject.find({numOfDay: data});
+			const subjects = await Subject.find({numOfDay: data, numOfWeek: subject.numOfWeek});
 			for(let i = 0; i < subjects.length; i++) {
 				if(subject.numOfLesson === subjects[i].numOfLesson) {
-					console.log(subjects[i].numOfLesson)
-					return bot.sendMessage(chatId, `В цей день ${subjects[i].numOfLesson} пара вже зайнята. Вибери інший день...`, dayOptions);
+					return bot.sendMessage(chatId, `В цей день ${lessonsNums[subjects[i].numOfLesson]} пара вже зайнята. Вибери інший день...`, dayOptions);
 				}
 			}
       await Subject.findOneAndUpdate({ name: chats[`enteredName-${chatId}`] }, { numOfDay: data });
@@ -476,13 +552,26 @@ const start = async () => {
       chats[`isEditNumOfDay-${chatId}`] = false;
       return bot.sendMessage(chatId, "День пари змінено!");
     }
+		if (chats[`isEditNumOfWeek-${chatId}`]) {
+			const subject = await Subject.findOne({name: chats[`enteredName-${chatId}`]});
+			const subjects = await Subject.find({numOfWeek: data, numOfDay: subject.numOfDay});
+			for(let i = 0; i < subjects.length; i++) {
+				if(subject.numOfLesson === subjects[i].numOfLesson) {
+					return bot.sendMessage(chatId, `В цей день ${lessonsNums[subjects[i].numOfLesson]} пара вже зайнята. Вибери інше...`, weekOptions);
+				}
+			}
+      await Subject.findOneAndUpdate({ name: chats[`enteredName-${chatId}`] }, { numOfWeek: data });
+      chats[`enteredName-${chatId}`] = "";
+      chats[`isEnterEditData-${chatId}`] = false;
+      chats[`isEditNumOfWeek-${chatId}`] = false;
+      return bot.sendMessage(chatId, "Парність/непарність пари змінено!");
+    }
 		if (chats[`isEditNumOfLesson-${chatId}`]) {
 			const subject = await Subject.findOne({name: chats[`enteredName-${chatId}`]});
-			const subjects = await Subject.find({numOfDay: subject.numOfDay});
+			const subjects = await Subject.find({numOfDay: subject.numOfDay, numOfWeek: subject.numOfWeek});
 			for(let i = 0; i < subjects.length; i++) {
 				if(data === subjects[i].numOfLesson) {
-					console.log(subjects[i].numOfLesson)
-					return bot.sendMessage(chatId, `В цей день ${subjects[i].numOfLesson} пара вже зайнята. Вибери інший номер...`, lessonOptions);
+					return bot.sendMessage(chatId, `В цей день ${data} пара вже зайнята. Вибери інший номер...`, lessonOptions);
 				}
 			}
       await Subject.findOneAndUpdate(
@@ -508,20 +597,28 @@ const start = async () => {
       chats[`isEditHT-${chatId}`] = true;
       return bot.sendMessage(chatId, "Введи текст для изменения...");
     }
-    if (chats[`isEnterEditData-${chatId}`] && data === "lesson") {
-			chats[`isEditNumOfLesson-${chatId}`] = true;
-      return bot.sendMessage(
-        chatId,
-        "Вибери номер пары для изменения...",
-        lessonOptions
-      );
-    }
     if (chats[`isEnterEditData-${chatId}`] && data === "day") {
 			chats[`isEditNumOfDay-${chatId}`] = true;
       return bot.sendMessage(
         chatId,
         "Вибери день для изменения...",
         dayOptions
+      );
+    }
+		if (chats[`isEnterEditData-${chatId}`] && data === "week") {
+			chats[`isEditNumOfWeek-${chatId}`] = true;
+      return bot.sendMessage(
+        chatId,
+        "Вибери парний чи непарний тиждень для изменения...",
+        weekOptions
+      );
+    }
+		if (chats[`isEnterEditData-${chatId}`] && data === "lesson") {
+			chats[`isEditNumOfLesson-${chatId}`] = true;
+      return bot.sendMessage(
+        chatId,
+        "Вибери номер пары для изменения...",
+        lessonOptions
       );
     }
 
@@ -542,6 +639,11 @@ const start = async () => {
       if (chats[`isDeleteSubject-${chatId}`] && data === subjectsNames[i]) {
         const subject = await Subject.findOne({ name: data });
         subject.remove();
+				const nameOfSubject = subjectsNames.indexOf(data);
+      	subjectsNames.splice(nameOfSubject, 1);
+				subjectsNamesOptions = subjectsNames.map((item) => {
+					return [{ text: item, callback_data: item }];
+				});
         chats[`isDeleteSubject-${chatId}`] = false;
         return bot.sendMessage(chatId, `Предмет ${data} видалено!`);
       }

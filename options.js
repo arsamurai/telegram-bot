@@ -35,8 +35,9 @@ module.exports = {
 				[{text: "Назва", callback_data: "name"}],
 				[{text: "Посилання", callback_data: "link"}],
 				[{text: "Д/з", callback_data: "h/t"}],
-				[{text: "Пара", callback_data: "lesson"}],
 				[{text: "День", callback_data: "day"}],
+				[{text: "Тиждень", callback_data: "week"}],
+				[{text: "Пара", callback_data: "lesson"}],
 			]
 		})
 	},
@@ -45,17 +46,6 @@ module.exports = {
 		reply_markup: JSON.stringify({
 			inline_keyboard: [
 				[{text: "Д/з", callback_data: "h/t"}],
-			]
-		})
-	},
-	lessonOptions: { 
-		reply_markup: JSON.stringify({
-			inline_keyboard: [
-				[{text: "1", callback_data: "08:00-09:35"}],
-				[{text: "2", callback_data: "09:50-11:25"}],
-				[{text: "3", callback_data: "11:50-13:25"}],
-				[{text: "4", callback_data: "13:40-15:15"}],
-				[{text: "5", callback_data: "15:20-16:55"}],
 			]
 		})
 	},
@@ -70,12 +60,30 @@ module.exports = {
 			]
 		})
 	},
+	weekOptions: { 
+		reply_markup: JSON.stringify({
+			inline_keyboard: [
+				[{text: "Непарний", callback_data: "odd"}],
+				[{text: "Парний", callback_data: "even"}],
+			]
+		})
+	},
+	lessonOptions: { 
+		reply_markup: JSON.stringify({
+			inline_keyboard: [
+				[{text: "1", callback_data: "1"}],
+				[{text: "2", callback_data: "2"}],
+				[{text: "3", callback_data: "3"}],
+				[{text: "4", callback_data: "4"}],
+				[{text: "5", callback_data: "5"}],
+			]
+		})
+	},
 	botOptions: { 
 		reply_markup: JSON.stringify({
 			keyboard: [
-				[{text: "Предмети"}],
-				[{text: "Шутку"}],
-				[{text: "Орел&Решка"}],
+				[{text: "Предмети"}, {text: "Шутку"}],
+				[{text: "Орел&Решка"}, {text: "Погода"}],
 			]
 		})
 	},
