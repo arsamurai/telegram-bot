@@ -82,9 +82,8 @@ module.exports = {
 	botOptions: { 
 		reply_markup: JSON.stringify({
 			keyboard: [
-				[{text: "Предмети"}],
-				[{text: "Шутку"}],
-				[{text: "Орел&Решка"}],
+				[{text: "Предмети"}, {text: "Шутку"}],
+				[{text: "Орел&Решка"}, {text: "Погода"}],
 			]
 		})
 	},

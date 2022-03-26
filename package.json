@@ -12,6 +12,7 @@
     "dotenv": "^16.0.0",
     "express": "^4.17.3",
     "mongoose": "^6.1.7",
+    "node-fetch": "^3.2.3",
     "node-telegram-bot-api": "0.56.0",
     "nodemon": "2.0.15"
   }

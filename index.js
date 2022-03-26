@@ -90,6 +90,18 @@ _${subjects[i].numOfLesson}_) \`${lessonsNums[subjects[i].numOfLesson]}\` — "[
 	return day;
 }
 
+const getWeather = async (chatId, city) => {
+	chats[`isKeyWord-${chatId}`] = true;
+	const response = await import('node-fetch').then(({ default: fetch }) => fetch(`https://api.openweathermap.org/data/2.5/weather?q=${city}&units=metric&appid=${process.env.weatherApiKey}`))
+	const data = await response.json();
+	if(data.cod == 404) {
+		return bot.sendMessage(chatId, 'Сорі, ошибка(');
+	}
+	await bot.sendMessage(chatId, `Погода в ${city}: ${data.weather[0].description}`);
+	await bot.sendPhoto(chatId, `https://openweathermap.org/img/wn/${data.weather[0].icon}@2x.png`)
+	return bot.sendMessage(chatId, `Температура: ${data.main.temp} °С`);
+}
+
 const start = async () => {
   //Set mongoDB
   try {
@@ -116,6 +128,7 @@ const start = async () => {
     { command: "/add_subject", description: "Add one more subject" },
     { command: "/edit_subject", description: "Edit one subject" },
     { command: "/delete_subject", description: "Delete one subject" },
+    { command: "/get_weather", description: "Get weather of location" },
   ]);
 
   //Reaction on message
@@ -357,6 +370,12 @@ const start = async () => {
       return bot.sendMessage(chatId, "Поки що немає жодного предмета...");
     }
 
+
+		if(text === 'погода') {
+			return getWeather(chatId, 'odessa');
+		}
+
+
 		//Replies to various messages
     if (text.includes("шутк")) {
       const jokes = [...black_humor, ...stupid_humor, ...stupid_humor_plus];
@@ -420,6 +439,12 @@ const start = async () => {
 
     !chats[`isKeyWord-${chatId}`] && bot.sendMessage(chatId, "Я хз, шо ти хочеш(");
   });
+
+
+
+
+
+
 
   bot.on("callback_query", async (msg) => {
     const data = msg.data;
