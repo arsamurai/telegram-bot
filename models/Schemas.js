@@ -4,8 +4,9 @@ const subjectSchema = new Schema({
     name: {type: String, required: true, unique: true},
     link: {type: String},
     hometask: {type: String},
+		numOfDay: {type: String},
+    numOfWeek: {type: String},
     numOfLesson: {type: String},
-    numOfDay: {type: String},
 })
 
 const userSchema = new Schema({
