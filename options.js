@@ -13,12 +13,13 @@ module.exports = {
 			]
 		})
 	},
-	againPasswordOptions: {
-		reply_markup: JSON.stringify({
-			inline_keyboard: [
-				[{text: "Спробувати ще раз", callback_data: "/again_password"}],
+	getUserLocation: {
+		reply_markup: {
+			one_time_keyboard: true,
+			keyboard: [
+				[{text: "Надати локацію", request_location: true}],
 			]
-		})
+	}
 	},
 	jokesOptions: { 
 		reply_markup: JSON.stringify({
@@ -81,6 +82,7 @@ module.exports = {
 	},
 	botOptions: { 
 		reply_markup: JSON.stringify({
+			one_time_keyboard: true,
 			keyboard: [
 				[{text: "Предмети"}, {text: "Шутку"}],
 				[{text: "Орел&Решка"}, {text: "Погода"}],
