@@ -24,98 +24,19 @@ const {
   answer_2,
 } = require("./answers");
 const { Subject, User } = require("./models/Schemas");
+const { textIncludes, startGame, getWeatherByLocation, getWeatherByCity, getJoke, getDayOfSubjects } = require("./helpers");
+const { lessonsNums, weekNums } = require("./constants");
+const { setBotCommands } = require("./commands");
 
 const bot = new TelegramBot(token, { polling: true });
 const chats = {};
 const subjectsNames = [];
-const lessonsNums = {
-	1: "08:00-09:35",
-	2: "09:50-11:25",
-	3: "11:50-13:25", 
-	4: "13:40-15:15",
-	5: "15:20-16:55"
-}
-const weekNums = {
-	"even": "П",
-	"odd": "Н",
-}
 
 // Jokes
 let usedJokes = [];
 let usedBlackHumor = [];
 let usedStupidHumor = [];
 let usedStupidHumorPlus = [];
-
-const startGame = async (chatId, name) => {
-	chats[`isGame-${chatId}`] = true;
-  await bot.sendMessage(chatId, `${name}, я загадал решку чи орла`);
-  const rememberNum = Math.floor(1 + Math.random() * 2);
-  chats[`gameNum-${chatId}`] = rememberNum;
-  await bot.sendMessage(chatId, "Твоя задача угадать...", gameOptions);
-};
-
-const getJoke = (usedAlready, jokes) => {
-  let numOfJoke = Math.floor(Math.random() * jokes.length);
-  if (!usedAlready.includes(jokes[numOfJoke])) {
-    usedAlready.push(jokes[numOfJoke]);
-    return numOfJoke;
-  } else {
-    return getJoke(usedAlready, jokes);
-  }
-};
-
-const textIncludes = (text, chatId, words, message) => {
-  for (let i = 0; i < words.length; i++) {
-    if (text.includes(words[i])) {
-      chats[`isKeyWord-${chatId}`] = true;
-      return bot.sendMessage(chatId, `${message}`);
-    }
-  }
-};
-
-const getDaySubjects = (subjects) => {
-	let day = '';
-	for(let i=0; i<subjects.length; i++) {
-		if(subjects[i+1] && subjects[i].numOfLesson === subjects[i+1].numOfLesson) {
-			day += `
-_${subjects[i].numOfLesson}_) \`${lessonsNums[subjects[i].numOfLesson]}\` — "[${subjects[i].name.toUpperCase()} | ${weekNums[subjects[i].numOfWeek]}](${subjects[i].link})" | "[${subjects[i+1].name.toUpperCase()} | ${weekNums[subjects[i+1].numOfWeek]}](${subjects[i+1].link})"`;
-		} else if(subjects[i-1] && subjects[i].numOfLesson !== subjects[i-1].numOfLesson){
-		day += `
-_${subjects[i].numOfLesson}_) \`${lessonsNums[subjects[i].numOfLesson]}\` — "[${subjects[i].name.toUpperCase()} | ${weekNums[subjects[i].numOfWeek]}](${subjects[i].link})"`;
-		} else if(!subjects[i-1] && !subjects[i-1]) {
-		day += `
-_${subjects[i].numOfLesson}_) \`${lessonsNums[subjects[i].numOfLesson]}\` — "[${subjects[i].name.toUpperCase()} | ${weekNums[subjects[i].numOfWeek]}](${subjects[i].link})"`;
-		}
-	}
-	return day;
-}
-
-const getWeatherByCity = async (chatId, city) => {
-	chats[`isKeyWord-${chatId}`] = true;
-	const response = await import('node-fetch').then(({ default: fetch }) => fetch(`https://api.openweathermap.org/data/2.5/weather?q=${city}&units=metric&lang=uk&appid=${process.env.weatherApiKey}`))
-	const data = await response.json();
-	if(data.cod == 404) {
-		return bot.sendMessage(chatId, 'Пункт не розпізнаний(');
-	}
-	const yourCity = city[0].toUpperCase() + city.slice(1);
-	await bot.sendMessage(chatId, `Погода в пункті ${yourCity}: ${data.weather[0].description}`, botOptions);
-	await bot.sendPhoto(chatId, `https://openweathermap.org/img/wn/${data.weather[0].icon}@2x.png`)
-	return bot.sendMessage(chatId, `Температура: ${data.main.temp} °С`);
-}
-
-const getWeather = async (chatId, lat, lon) => {
-	chats[`isKeyWord-${chatId}`] = true;
-	const response = await import('node-fetch').then(({ default: fetch }) => fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&lang=uk&appid=${process.env.weatherApiKey}`))
-	const data = await response.json();
-	const response_city = await import('node-fetch').then(({ default: fetch }) => fetch(`http://api.openweathermap.org/geo/1.0/reverse?lat=${lat}&lon=${lon}&limit=1&appid=${process.env.weatherApiKey}`))
-	const data_city = await response_city.json();
-	if(data.cod == 404 || data_city == 404) {
-		return bot.sendMessage(chatId, 'Пункт не розпізнаний(');
-	}
-	await bot.sendMessage(chatId, `Погода в пункті ${data_city[0].local_names['uk']}: ${data.weather[0].description}`, botOptions);
-	await bot.sendPhoto(chatId, `https://openweathermap.org/img/wn/${data.weather[0].icon}@2x.png`)
-	return bot.sendMessage(chatId, `Температура: ${data.main.temp} °С`);
-}
 
 const start = async () => {
   //Set mongoDB
@@ -134,20 +55,9 @@ const start = async () => {
   });
 
   //Bot commands
-  bot.setMyCommands([
-    { command: "/start", description: "Начальное приветствие" },
-    { command: "/help", description: "Инфа о методах" },
-    { command: "/game", description: "Check your lucky" },
-    { command: "/jokes", description: "Best humor in the world" },
-    { command: "/get_subjects", description: "Get all subject" },
-    { command: "/add_subject", description: "Add one more subject" },
-    { command: "/edit_subject", description: "Edit one subject" },
-    { command: "/delete_subject", description: "Delete one subject" },
-    { command: "/get_your_city_weather", description: "Get weather of your location" },
-    { command: "/get_city_weather", description: "Get weather of any city location" },
-  ]);
+  bot.setMyCommands(setBotCommands);
 
-  //Reaction on message
+  //// -------- Reaction on message --------
   bot.on("message", async (msg) => {
     const chatId = msg.chat.id;
     const text = msg && msg.text?.toLowerCase();
@@ -273,11 +183,11 @@ const start = async () => {
 				}
       }
 
-			monday += getDaySubjects(mondaySubjects);
-			tuesday += getDaySubjects(tuesdaySubjects);
-			wednesday += getDaySubjects(wednesdaySubjects);
-			thursday += getDaySubjects(thursdaySubjects);
-			friday += getDaySubjects(fridaySubjects);
+			monday += getDayOfSubjects(weekNums, lessonsNums, mondaySubjects);
+			tuesday += getDayOfSubjects(weekNums, lessonsNums, tuesdaySubjects);
+			wednesday += getDayOfSubjects(weekNums, lessonsNums, wednesdaySubjects);
+			thursday += getDayOfSubjects(weekNums, lessonsNums, thursdaySubjects);
+			friday += getDayOfSubjects(weekNums, lessonsNums, fridaySubjects);
 			
       if (monday.length > 15) result += `${monday}`;
       if (tuesday.length > 15) {
@@ -391,41 +301,41 @@ const start = async () => {
 		// Get weather of your location
 		if(text === 'погода' || text === '/get_your_city_weather') {
 			if(chats[`isWeatherLat-${chatId}`]) {
-				return getWeather(chatId, chats[`isWeatherLat-${chatId}`], chats[`isWeatherLon-${chatId}`]);
+				return getWeatherByLocation(bot, chats, chatId, chats[`isWeatherLat-${chatId}`], chats[`isWeatherLon-${chatId}`]);
 			} else if(chats[`isYourCityForWeather-${chatId}`]) {
-				return getWeatherByCity(chatId, chats[`isYourCityForWeather-${chatId}`]);
+				return getWeatherByCity(bot, chats, chatId, chats[`isYourCityForWeather-${chatId}`]);
 			}
-			chats[`isEnterCity-${chatId}`] = true;
+			chats[`isEnterYourCity-${chatId}`] = true;
 			return bot.sendMessage(chatId, `${name}, поділиcь локацією або впиши свій наслений пункт. Я запам'ятаю - і надалі питати не буду) Або відмовся, написавши 'відбій'`, getUserLocation);
 		}
 		if(text === 'відбій') {
-			chats[`isEnterCity-${chatId}`] = false;
+			chats[`isEnterYourCity-${chatId}`] = false;
 			return bot.sendMessage(chatId, 'Відмову прийнято, але хер ти тепер знатимеш погоду(', botOptions);
 		}
-		if(chats[`isEnterCity-${chatId}`]) {
+		if(chats[`isEnterYourCity-${chatId}`]) {
 			chats[`isYourCityForWeather-${chatId}`] = text;
 		}
-		if(chats[`isEnterCity-${chatId}`] && location) {
-			chats[`isEnterCity-${chatId}`] = false;
+		if(chats[`isEnterYourCity-${chatId}`] && location) {
+			chats[`isEnterYourCity-${chatId}`] = false;
 			chats[`isWeatherLat-${chatId}`] = location.latitude;
 			chats[`isWeatherLon-${chatId}`] = location.longitude;
-			return getWeather(chatId, location.latitude, location.longitude);
-		} else if(chats[`isEnterCity-${chatId}`] && chats[`isYourCityForWeather-${chatId}`]) {
-			chats[`isEnterCity-${chatId}`] = false;
-			return getWeatherByCity(chatId, chats[`isYourCityForWeather-${chatId}`]);
+			return getWeatherByLocation(bot, chats, chatId, location.latitude, location.longitude);
+		} else if(chats[`isEnterYourCity-${chatId}`] && chats[`isYourCityForWeather-${chatId}`]) {
+			chats[`isEnterYourCity-${chatId}`] = false;
+			return getWeatherByCity(bot, chats, chatId, chats[`isYourCityForWeather-${chatId}`]);
 		}
 
 		// Get weather of any city location
 		if(text === '/get_city_weather') {
-			chats[`isEnterCity-${chatId}`] = true;
+			chats[`isEnterSomeCity-${chatId}`] = true;
 			return bot.sendMessage(chatId, 'Введи пункт, де необхідно дізнатись погоду...', botOptions);
 		}
-		if(chats[`isEnterCity-${chatId}`]) {
+		if(chats[`isEnterSomeCity-${chatId}`]) {
 			chats[`isCityForWeather-${chatId}`] = text;
 		}
-		if(chats[`isEnterCity-${chatId}`] && chats[`isCityForWeather-${chatId}`]) {
-			chats[`isEnterCity-${chatId}`] = false;
-			return getWeatherByCity(chatId, chats[`isCityForWeather-${chatId}`]);
+		if(chats[`isEnterSomeCity-${chatId}`] && chats[`isCityForWeather-${chatId}`]) {
+			chats[`isEnterSomeCity-${chatId}`] = false;
+			return getWeatherByCity(bot, chats, chatId, chats[`isCityForWeather-${chatId}`]);
 		}
 
 
@@ -444,13 +354,17 @@ const start = async () => {
     }
 
     textIncludes(
+			bot, 
+			chats,
       text,
       chatId,
       ["привет", "хальоу", "алоха"],
       answers(answer_2)
     );
-    textIncludes(text, chatId, ["аха", "хaх", "пхп", "ахп"], answers(answer_5));
+    textIncludes(bot, chats, text, chatId, ["аха", "хaх", "пхп", "ахп"], answers(answer_5));
     textIncludes(
+			bot, 
+			chats,
       text,
       chatId,
       ["дякую", "спасибо", "благодарю "],
@@ -484,7 +398,7 @@ const start = async () => {
       return bot.sendMessage(chatId, `${name}, сорі, але тут 0 інфи`);
     }
     if (text === "/game" || text === "орел&решка") {
-      return startGame(chatId, name);
+      return startGame(bot, chats, gameOptions, chatId, name);
     }
     if (text === "/jokes") {
       return bot.sendMessage(chatId, "Захотелось поугарать?...", jokesOptions);
@@ -495,10 +409,7 @@ const start = async () => {
 
 
 
-
-
-
-
+	// -------- Reaction on callback_query --------
   bot.on("callback_query", async (msg) => {
     const data = msg.data;
     const chatId = msg.message.chat.id;
